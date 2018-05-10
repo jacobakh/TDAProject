@@ -10,21 +10,28 @@ knitr::opts_chunk$set(echo = TRUE)
 library(TDA)
 ```
 
+Intro:
+I began the semester with a lingering feeling of immersing myself into something intellectually stimulating. I stumbled across topology in my Real Analysis course fall of 2017. I generally enjoyed working on it and noticed the beautiful generalized, objective theory behind it. Since my field is data science and analytics, I figured it would be appropriate to combine two fields which I am genuinely interested in and go from through. Thus, I stumbled upon topological data analysis. 
+
+I reached out to several profession sources and eventually stumbled upon Dmitriy Mozorov at the Berkeley Institute of Data Science. He advised me in this research and was a great in my concrete understanding of the subject.
+To demonstrate my new found abilities in topological data analysis, I choose to apply  my understanding to a project.
+
 ############################################
 ## Topological Data Analysis  ##
-## Testing on   Binance API Data
-## Description This breast cancer database was obtained from the University of Wisconsin Hospitals, Madison from Dr. William H. Wolberg. He assessed biopsies of breast tumours for 699 patients up to 15 July 1992; each of nine attributes has been scored on a scale of 1 to 10, and the outcome is also known. There are 699 rows and 11 columns.
+## Problem: How well can TDA be used on cyrptocurrency data?
+## Testing on Binance API Data
+## Description: We provide daily cryptocurrency data (transaction count, on-chain transaction volume, value of created coins, price, market cap, and exchange volume) in CSV format. The data sample stretches back to December 2013. We explain the column titles and some shortcomings here.
+Source: https://coinmetrics.io/data-downloads/
 ##  ID sample code number (not unique).
-#V1 clump thickness.
-#V2 uniformity of cell size.
-#V3 uniformity of cell shape.
-#V4 marginal adhesion.
-#V5 single epithelial cell size.
-#V6 bare nuclei (16 values are missing).
-#V7 bland chromatin.
-#V8 normal nucleoli.
-#V9 mitoses.
-#class = outcome >  "benign" or "malignant". (B or M)
+#V1 date: Date on georgian calender.
+#V2 txVolume(USD): “on-chain transaction volume.” Essentially a broad and largely unadjusted measure of the total value of outputs on the blockchain, on a given day.
+#V3 txCount: Number of transactions happening on the public blockchain a day. The is a broad estimation. More can be explained in the source as to why that is.
+#V4  marketcap(USD): The unit price multiplied by the number of units in circulation.
+#V5 Price: Open price, received from CoinMarketCap.
+#V6 exchangevolume(USD): The dollar value of the volume at exchanges. Also received from CoinMarketCap.
+#V7 generatedCoins: The number of new coins that have been brought into existence on that day
+#V8 Fees: Fees. One important peice of information is that the fees in this data are based on the native currency, not USD.
+
 ############################################
 
  
