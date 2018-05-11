@@ -7,7 +7,6 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(TDA)
 ```
 
 Intro:
@@ -48,250 +47,111 @@ library(reshape2)  ## here is where we do a 'pivot table'
 library(plyr)
 library(phom)
 library(dplyr)
+library(lubridate)
+```
 
-### (1) Let's begin with Diffusion Map
 
-setwd("~/Downloads/")
+### (1) Cleaning the data. A lot of wrangling needed to be done. The variables were put into strings in the original dataset so they had to be converted into variables in order to do any sort of analysis.
+```{r}
+setwd("~/Documents/TDA/")
 
-btc = read.csv("btc.csv", header = F) #read in table
-btc = btc[-1, ]    
-btc$V1 = as.Date(btc$V1, "%m/%d/%Y")
+colnames <- colnames(btc)
+btc = read.csv("btc.csv", header = F)
+colnames(btc_true) <- colnames
+btc = btc[-1,] 
+btc <- btc[1:8]
 
-  names(btc) <- as.character(unlist(btc[1,]))
-  btc <- btc[-1,]
 
-columnNames = colnames(btc)
-dates <- row.names(btc) #extract date feature
-dates_ <- as.data.frame(dates)
-dates_$ID <- seq.int(nrow(dates_))
-row.names(btc) <- seq.int(nrow(btc)) #reset row names from 1 to the number of rows in the dataset
+btc$V2 <- as.numeric(as.character(btc$V2))
+btc$V3 <- as.numeric(as.character(btc$V3))
+btc$V4 <- as.numeric(as.character(btc$V4))
+btc$V5 <- as.numeric(as.character(btc$V5))
+btc$V6 <- as.numeric(as.character(btc$V6))
+btc$V7 <- as.numeric(as.character(btc$V7))
+btc$V8 <- as.numeric(as.character(btc$V8))
+breaks <- c(65, 2565, 5065, 7565, 10065, 12065, 15065, 17065, 20065)
+btc <- btc %>%
+  mutate(Price_bin = cut(V5, breaks)) #categorize the price of the coin into 12 bins.
 
-test <- btc %>%
-  select(date, txVolume.USD.)
-btc = btc[1:8]
-btc$ID <- seq.int(nrow(btc))
-btc[1] <- btc$ID
-eth = read.csv("eth.csv")
-eth$date = as.Date(eth$date, "%m/%d/%Y")
-
-head(btc) # see header to decode V1-V9;  b = benign; M = malignant
+head(btc) # see header to decode V1-V8;
 summary(btc)
+ggplot(btc) + aes(x = Price_bin) + geom_bar() #examine how the bins are distributed
 
-## what we are starting with 
+head(btc) # see header to decode V1-V8;
+summary(btc) #what we're starting with
+```
 
-## WARNING - this big task choked my computer - may want to skip this line
-plot(eth$price.USD.)
-plot(btc[1:10], main="biopsy data set", pch=23, bg = c("red", "green")
-     [unclass(biopsy$outcome)])
+## EDA
+```{r}
+plot(x = btc$V1, y = btc$V5, main = "Price of bitcoin since 2013")
+ggplot(btc[1:1000,]) + aes(x=V1, y = V5) + geom_point() 
+#Examine how the bins are distributed
+
+plot(btc[1:8], main="bitcoin data set", pch=23, bg = c("red", "green")
+     [unclass(btc$price)])
+#Examine how all the variables interact with one another
 
 
-data <- biopsy[1:9] ## let's learn off the first 4 columns
-outcome <- biopsy$outcome ## and species is our target and classifier 
-
+data <- btc[2:8] ## Take out date variable 
 D = dist(scale(data)) # use Euclidean distance on data
-## DIST: This function computes and returns the distance matrix computed by using the specified distance measure to compute the distances between the rows of a data matrix.
+## DIST: This function computes and returns the distance matrix computed by using the specified distance measure to compute the distances between the rows of a data matrix. This would be the first step in creating a TDA model as the euclidean distances need to be extracted
+```
 
 ## DIFFUSE: Description : Uses the pair-wise distance matrix for a data set to compute the diffusion map coefficients. Computes the Markov transition probability matrix, and its eigenvalues and left & right eigenvectors. Returns a 'dmap' object.
-# Usage - diffuse(D, eps.val = epsilonCompute(D), neigen = NULL, t = 0, maxdim = 50, delta=10^-5)
-# Arguments D - n-by-n pairwise distance matrix for a data set with n points, or alternatively output from the dist() function
-# eps.val     epsilon parameter for the diffusion weight matrix, exp(-D$^2$/(eps.val)). Default is to use the epsilon corresponding to the median distance to the 0.01*n nearest neighbor
-# neigen - number of dimensions of final diffusion map representation. Default uses number of dimensions corresponding to a 95% drop-off in eigenvalue multiplier.
-# t     optional time-scale parameter in the diffusion map. The (recommended) default uses multiscale geometry.
+
+The following code cannot be run due to technical difficulties with the igraph package. However rather than putting it into a code chance I figured it'd be good to leave it here and work on it once Rstudio fixes the bugs in this package and updates it.
 
 dmap = diffuse(D, eps.val=10, t=1, neigen=2) ## just run with the standard default settings
 plot(dmap$X[,1],dmap$X[,2],col=outcome,pch=paste(outcome), 
      xlab="Diffusion Map Coordinate 1", 
      ylab="Diffusion Map Coordinate 2",
-     main="Diffusion Map of U.Wisc Biopsy Data EPS10")
-## not ideal
+     main="Diffusion Map of Bitcoin data")
 
-dmap = diffuse(D,eps.val=400, t=1, neigen=2)
-## if this works, you should see clusters of malignent and benign 
-plot(dmap$X[,1],dmap$X[,2],col=outcome,pch=paste(outcome), 
-     xlab="Diffusion Map Coordinate 1", 
-     ylab="Diffusion Map Coordinate 2",
-     main="Diffusion Map of U.Wisc Biopsy Data EPS400")
-## yes, good  
+
 
 # 2) OK - now Use random forest "Department" classifier to define distances
-
-fit = randomForest(data, outcome, ntree=20, proximity=TRUE) 
-print(fit)
-varImpPlot(fit)
-## V2, V6 and V3 seem to be  is dominant driver =
-   #V2 uniformity of cell size.
-   #V6 bare nuclei (16 values are missing).
-   #V3 uniformity of cell shape.
-
-# PLOT 3
+```{r}
+bins = btc$Price_bin
+data = btc[2:9]
+rf_fit = randomForest(test, bins, ntree=10, proximity=TRUE) 
+print(rf_fit)
+varImpPlot(rf_fit)
 #version
-D2 = 1-fit$proximity # use 1 - proximity
+D2 = 1-rf_fit$proximity # use 1 - proximity
+```
+
+### Due to the igraph package this code could not be run either. 
 dmap2 = diffuse(D2,eps.val=40, t=.01, neigen=2)   #original dmap1 = diffuse(D1,eps.val=.1, t=1, neigen=2)
 head(dmap2)
 
 cluster2 = hclust(dist(dmap2$X[,1:2]))
-plot(cluster2); abline(h=1.8, col='blue',lwd=3)
+plot(cluster2); abline(h=2.0, col='red',lwd=3)
 
-## PLOT 5
 plot(dmap2$X[,1],dmap2$X[,2],col=outcome,pch=paste(outcome), 
      xlab="Diffusion Map Coordinate 1", 
      ylab="Diffusion Map Coordinate 2")
 
-#PLOT 6
-## clustering variable 4 (Plot 7) vs 10 is interesting
-## depends what you want to output
-clustering2 = cutree(cluster2,k=10)  ## this is how many nodes there are
-clustering2
-
-plot(dmap2$X[,1],dmap2$X[,2],col=clustering2, pch=19,
-     xlab="Diffusion Map Coordinate 1", 
-     ylab="Diffusion Map Coordinate 2", 
-     main="Biopsy Data - Starting to look Interesting")
-
-## See plot 8 - note number of 'buckets' 
-
-output2 = data.frame(dmap2$X,outcome,clustering2)
-colnames(output2)[4] <- "group"  ## rename column
-head(output2)
-
-write.csv(output2,"TDA_export_biopsy.csv") 
-## may look at this in D3 or Google Fusion
-
-
-#####################################
-# 3) Try 1/proximity - 1 instead - PLOT 9
-fit3 = randomForest(data, outcome, ntree=100, proximity=TRUE) 
-
-D3 = 1./fit3$proximity - 1. # use 1/proximity - 1
-dmap3 = diffuse(D3,eps.val=400, t=1, neigen=2) 
+dmap = diffuse(D3,eps.val=400, t=1, neigen=2) 
 plot(dmap3$X[,1],dmap3$X[,2],col=outcome,pch=paste(outcome), 
      xlab="Diffusion Map Coordinate 1", 
      ylab="Diffusion Map Coordinate 2",
-     main = "Biopsy Data 1/prox RF")
-## using RF method we generate  plot similar to plot 6 (but better focus)
+     main = "BTC Random Forest Prediction")
+## using RF method we generate  plot similar t
 
-cluster3 = hclust(dist(dmap3$X[,1:2]))
-plot(cluster3); abline(h=.6, col='green',lwd=3)
-## probably overfitting here
 
-BINS = 12
-clustering3 = cutree(cluster3,k=BINS)  ## this is how many nodes there are
-clustering3
 
-plot(dmap3$X[,1],dmap3$X[,2],col=clustering3, pch=19,
-     xlab="Diffusion Map Coordinate 1", 
-     ylab="Diffusion Map Coordinate 2")
-## Plot 10
 
-#### Nice - this looks like somehting we can stitch together and ascribe weight to - 
+### The actual TDA plot. Due to 
 
-## fixed?
-output3 = data.frame(dmap3$X,outcome,clustering3)
-head(output3)
-melted <- melt(output3, measure = "clustering3", id = c("outcome"))
-head(melted)
-print(cast(melted, value ~ ., sum)) ## useful to show pivot, but not valid add
 
-gold <- print(cast(melted, value ~ ., sum)) ## useful to show pivot, but not valid add
-colnames(gold)[1] <- "cluster"
-colnames(gold)[2] <- "count"
-## we sum all, so still need to divide by number of samples in each bin
-gold$count <- gold$count / gold$cluster
-gold ## ok - here is count of each 'bin'
 
-melted <- melt(output3, measure = "X1", id = c("clustering3"))
-head(melted)
-silver <- print(cast(melted, clustering3 ~ ., sum)) ## useful to show pivot, but not valid add
-colnames(silver)[2] <- "sum"
-silver
-silver$sum <- silver$sum / gold$count # this sound divide total sum of coodinate by count of them, to give average
-silver ## ok, here is our X1 center of gravity
-gold
-gold$x <- silver$sum
-
-## and the long winded way to do it for X2 (Y coordinate)
-melted <- melt(output3, measure = "X2", id = c("clustering3"))
-head(melted)
-silver <- print(cast(melted, clustering3 ~ ., sum)) ## useful to show pivot, but not valid add
-colnames(silver)[2] <- "sum"
-silver
-silver$sum <- silver$sum / gold$count # this sound divide total sum of coodinate by count of them, to give average
-silver ## ok, here is our X1 center of gravity
-gold$y <- silver$sum  ## here is Y cooridnates
-gold  ## Ok, we have a BINS (e.g. 12) number of baskets, with a count and a center of gravity
-## this is good data to do a bubble chart (weight is count;)
-
-## google fusion does not like negatives - excel is fine -(depends on where you want to wrok with x y cooridnate data)
-#gold$x <- gold$x + 1 # can omit if you like
-#gold$y <- gold$y + 1 # can omit if you like - shifts x y coordinates up and over by 1 - non negative
-
-write.csv(gold,"TDA_export_bubble_gold.csv") 
-
-## or can do in R - http://lamages.blogspot.com/2012/03/googlevis-0215-is-released-improved-geo.html
-## Gradient colour example
-
-#install.packages("googleVis")  ##
-library(googleVis)
-
-### IF BLANK IN LITTLE WINDOW in R STUDIO
-## THEN HIT THE EXPAND BUTTON AND SHOULD SHOW UP IN FULL SCREEN - served by , for example, http://127.0.0.1:25271/custom/googleVis/LineChartID8dc4e42125d.html 
-
-####### THIS WORKS!
-goldBubble <- gvisBubbleChart(gold, idvar="cluster", xvar="x", yvar="y",
+TDA_plot <- gvisBubbleChart(rf_fit, idvar="cluster", xvar="x", yvar="y",
                            colorvar="count", sizevar="count",
                            options=list(
-                             title='Biopsy Clustered Data - TDA Exploration',
-                             hAxis='{minValue:-1, maxValue:4}',
-                             vAxis='{minValue:-1, maxValue:4}'
+                             title='BTC Clustered Data - TDA Exploration',
+                             hAxis='{minValue:-5, maxValue:6}',
+                             vAxis='{minValue:-2, maxValue:7}'
                             )
 )
-plot(goldBubble) ## to see it expand R studio viewer to full screen
-######## takes gold and plots bubble chart from google vis in R environment :)
-## if you want to work with 'gold' outside of R (eg. google fusion or excel)
-write.csv(gold,"TDA_export_data3.csv") 
-
- 
-
-# using smoothed histograms
-D4 = dist(data)
-# dmap4 = diffuse(D4,eps.val=50, t=1, neigen=2)  # works pretty good with biopsy mythica
-dmap4 = diffuse(D4,eps.val=50, t=1, neigen=2) 
-head(dmap4)
-plot(dmap4$X[,1],dmap4$X[,2],col=outcome,pch=paste(outcome), 
-     xlab="Diffusion Map Coordinate 1", 
-     ylab="Diffusion Map Coordinate 2", ylim=c(-2,2))
-
-# fit RF on smoothed histograms
-fit4 = randomForest(data, outcome, ntree=50, proximity=TRUE)
-## 1000 is too much - overfitting
-print(fit4)
-
- 
-
- 
-
- 
-
-############### LAST BIT NOT WORKING YET - NO BARCODES FOR BIOPSY XXXXXXXXXX
-
-############### LAST BIT NOT WORKING YET - NO BARCODES FOR BIOPSY XXXXXXXXXX
-
-########## some pHO for good measure
-### Source http://blog.revolutionanalytics.com/2014/01/topological-data-analysis-with-r.html 
-## (5) Betti where are you? - See Plot 4
-data5 <- as.matrix(data)
-#data5 <- as.matrix(data[,-5])
-dim(data5)
-head(data5)
-max_dim <- 0
-max_f <- 1
-
-GoldInt0 <- pHom(data5, 
-                 dimension=max_dim,              # maximum dimension of persistent homology computed
-                 max_filtration_value=max_f,     # maximum dimension of filtration complex
-                 mode="vr",                      # type of filtration complex
-                 metric="euclidean")
-
-plotBarcodeDiagram(GoldInt0, max_dim, max_f, title="H0 Barcode plot Biopsy Data")
-#not working well
+plot(TDA_plot) 
 
